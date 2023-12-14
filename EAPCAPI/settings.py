@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apievent',
     'rest_framework',
     'corsheaders',
+    'rest_framework.authtoken',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -83,6 +84,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'EAPCAPI.wsgi.application'
 
+# User Model Config
+AUTH_USER_MODEL = 'apiaccount.User'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -130,6 +133,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR.parent / "static" / "media"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
