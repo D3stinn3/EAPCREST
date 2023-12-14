@@ -1,59 +1,62 @@
-from django.shortcuts import render
-
-from rest_framework import generics, permissions, status
-from rest_framework.authtoken.views import ObtainAuthToken
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import status
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view
 from apiaccount.models import User
+from rest_framework.views import APIView
+from django.contrib.auth import logout
 
 
 from apiaccount.serializers import UserSerializer
 
 
-class UserLoginView(ObtainAuthToken):
-    serializer_class = UserSerializer
-    
+class UserLoginView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data,
-            context={'request': request}
-            )
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        user_serializer = UserSerializer(user)
+        user = get_object_or_404(User, username=request.data['username'])
+        if not user.check_password(request.data['password']):
+            return Response({"Detail": "User Not Found"}, status=status.HTTP_404_NOT_FOUND)
         token, created = Token.objects.get_or_create(user=user)
-        return Response(
-            {'token': token.key, 'user': user_serializer.data},
-            status=status.HTTP_201_CREATED
-            )
+        serializer = UserSerializer(instance=user)
+        if user:
+            if user.is_active:
+                return Response({"message": "Success, BaseUser Logged In", "token": token.key, "user": serializer.data})
+            return Response({"message": f"{str(user.username)} is not Active"})
+        return Response(serializer.errors, status=status.HTTP_408_REQUEST_TIMEOUT)
     
 userloginView = UserLoginView.as_view()
 
-class UserLogoutView(generics.DestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+class UserLogoutView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, *args, **kwargs):
-        request.auth.delete()
-        return Response(
-            {"detail": "Successfully logged out."},
-            status=status.HTTP_200_OK
-            )
+        logout(request)
+        return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
 
 userlogoutView = UserLogoutView.as_view()
 
-class UserSignupView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]  # Allow anyone to register
+class UserSignupView(APIView):
+    permission_classes = [AllowAny]
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        user.set_password(serializer.validated_data['password'])
-        user.save()
-        return Response(
-            {"detail": "Successfully signed in."},
-            status=status.HTTP_201_CREATED
+    def post(self, request, *args, **kwargs):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user_instance = serializer.save()
+            user_instance.set_password(request.data['password'])
+            user_instance.is_active = True
+            user_instance.save()
+
+            # Token Generated during SignUp
+            token, created = Token.objects.get_or_create(user=user_instance)
+
+            return Response(
+                {"message": "Success, BaseUser Registered!", "token": token.key, "user": serializer.data},
+                status=status.HTTP_201_CREATED
             )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 usersignupView = UserSignupView.as_view()

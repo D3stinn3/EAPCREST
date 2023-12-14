@@ -1,0 +1,16 @@
+POST http://127.0.0.1:8000/accountapi/signup/
+Content-Type: application/json
+
+{"username": "testuser@gmail.com", "password": "Test@123"}
+
+###
+POST http://127.0.0.1:8000/accountapi/login/
+Content-Type: application/json
+
+{"username": "testuser@gmail.com", "password": "Test@123"}
+
+###
+POST http://127.0.0.1:8000/accountapi/logout/
+Content-Type: application/json
+
+{"username": "testuser@gmail.com", "password": "Test@123"}
